@@ -9,7 +9,6 @@ resource "proxmox_lxc" "mysql" {
   memory       = 4096
   cores        = 2
   onboot       = true
-  
   tty          = 2
   cmode        = "tty"
   console      = true
