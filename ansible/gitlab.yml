@@ -1,0 +1,68 @@
+---
+- name: Deploy GitLab on gitlab-container
+  hosts: gitlab
+  become: yes
+  tasks:
+  # Sākuma laiks
+  - name: Record start time
+    command: date +%s
+    register: start_time
+    delegate_to: localhost
+  # Esošie uzdevumi
+  - name: Install Python and required packages
+    apt:
+      name:
+      - python3
+      - python3-pip
+      state: present
+      update_cache: yes
+  - name: Install GitLab on gitlab-container
+    block:
+    - name: Install dependencies for GitLab
+      apt:
+        name:
+        - curl
+        - openssh-server
+        - ca-certificates
+        - tzdata
+        - perl
+        state: present
+        update_cache: yes
+    - name: Add GitLab GPG key
+      apt_key:
+        url: https://packages.gitlab.com/gitlab/gitlab-ee/gpgkey
+        state: present
+    - name: Add GitLab repository for Ubuntu 22.04
+      apt_repository:
+        repo: "deb https://packages.gitlab.com/gitlab/gitlab-ee/ubuntu/ jammy main"
+        state: present
+        filename: gitlab_gitlab-ee
+    - name: Update apt cache after adding GitLab repository
+      apt:
+        update_cache: yes
+    - name: Install GitLab
+      apt:
+        name: gitlab-ee
+        state: present
+    - name: Configure GitLab external URL
+      lineinfile:
+        path: /etc/gitlab/gitlab.rb
+        regexp: '^external_url'
+        line: "external_url 'http://[GITLAB_ZEROTIER_IP_ADDRESS]'"
+    - name: Reconfigure GitLab
+      command: gitlab-ctl reconfigure
+  # Beigu laiks
+  - name: Record end time
+    command: date +%s
+    register: end_time
+    delegate_to: localhost
+  # Izvadīt laiku
+  - name: Show execution time
+    debug:
+      msg: "GitLab uzstādīšanas laiks: {{ (end_time.stdout | int - start_time.stdout | int) }} sekundes"
+  - name: Log execution time
+    lineinfile:
+      path: ansible_time.log
+      line: "GitLab uzstādīšanas laiks: {{ (end_time.stdout | int - start_time.stdout | int) }} sekundes"
+      create: yes
+      delegate_to: localhost
