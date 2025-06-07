@@ -46,34 +46,20 @@ variable "db_name" {
 }
 
 variable "web_app_external_port" {
-  description = "External port on the Docker LXC host for the web app container"
+  description = "External port on the Docker LXC host that will be mapped to the WEB application container"
   type        = number
-  default     = 8080
-}
-
-variable "grafana_external_port" {
-  description = "External port on the Docker LXC host for the Grafana container"
-  type        = number
-  default     = 3000
-}
-
-variable "grafana_admin_password" {
-  description = "Password for the Grafana 'admin' user"
-  type        = string
-  sensitive   = true
-  default     = "######"
+  default     = 8080 # Access will be via http://[DOCKER_ZEROTIER_IP_ADDRESS]:8080
 }
 
 # --- Resources ---
-
-# 1. Build Docker Image for the Web App
+# 1. Build Docker Image
 resource "docker_image" "iot_web_app_image" {
   # Image name and tag
   name = "iot-web-app:latest"
 
   build {
     # Path to the directory where the Dockerfile and application code (`app.py`) are located.
-    # The path is relative to this .tf file's location.
+    # The path is relative to this main.tf file's location.
     context = "${path.root}/../app"
 
     # Add a build argument that depends on the content of app.py.
@@ -82,94 +68,67 @@ resource "docker_image" "iot_web_app_image" {
     build_arg = {
       APP_CONTENT_HASH = filesha256("${path.root}/../app/app.py")
     }
+    # dockerfile = "Dockerfile"
+    # extra_options = ["--no-cache"]
   }
 
   # Prevents Terraform from deleting the image from the local Docker cache
   # when the resource is removed from the code/state.
+  # If you want `terraform destroy` to attempt to delete the image, set this to `false`.
   keep_locally = true
 }
 
-# 2. Run Docker Container for the Web App
+# 2. Run Docker Container
+# This resource will run a container using the previously built image.
 resource "docker_container" "iot_web_server_container" {
   # Container name in the Docker environment
   name  = "iot-data-viewer-web"
 
-  # Use the ID of the image built in the previous step.
+  # Specifies the ID of the image built in the previous step.
+  # Using .image_id ensures the container is recreated if the image changes.
   image = docker_image.iot_web_app_image.image_id
 
-  # Port mapping: internal -> external
+  # Port mapping:
+  # internal - the port the application listens on *inside* the container (from Dockerfile EXPOSE)
+  # external - the port that will be opened on the Docker *host* machine
   ports {
     internal = 5000
     external = var.web_app_external_port
   }
 
-  # Environment variables to be passed to the container.
+  # Environment variables that will be passed to the container.
+  # The application (`app.py`) will use these to connect to MySQL.
   env = [
     "DB_HOST=${var.db_host}",
     "DB_USER=${var.db_user}",
     "DB_PASSWORD=${var.db_password}",
     "DB_NAME=${var.db_name}",
-    # Additional variables, e.g., for debugging
-    "FLASK_ENV=production"
+    # Additional variables if needed, for example:
+    "FLASK_ENV=production" # Can be set to 'development' for debugging
   ]
 
-  # Container restart policy
+  # Container restart policy.
+  # "unless-stopped" - will restart the container if it stops, unless manually stopped.
+  # Other options: "no", "always", "on-failure"
   restart = "unless-stopped"
 
-  # Ensures this resource is created only after the image is built.
+  # Adds the container to the default 'bridge' network in Docker.
+  # Since MySQL is in another LXC container but on the same ZeroTier network,
+  # connection via IP address should work.
+  # If a specific Docker network were needed, it would be defined separately with `docker_network`
+  # and added here with `networks_advanced`.
+
+  # Ensures that this resource is created or updated only *after*
+  # the `docker_image.iot_web_app_image` resource has been successfully created/updated.
   depends_on = [
     docker_image.iot_web_app_image
   ]
 }
 
-# --- Grafana Resources ---
-# Create a Docker Volume for Grafana's persistent data
-resource "docker_volume" "grafana_data_volume" {
-  name = "grafana-storage"
-}
-
-# Pull the Grafana Docker Image
-resource "docker_image" "grafana_image" {
-  name         = "grafana/grafana:latest"
-  keep_locally = true
-}
-
-# Run the Docker Container for Grafana
-resource "docker_container" "grafana_container" {
-  name  = "grafana-server"
-  image = docker_image.grafana_image.image_id
-
-  ports {
-    internal = 3000
-    external = var.grafana_external_port
-  }
-
-  volumes {
-    volume_name    = docker_volume.grafana_data_volume.name
-    container_path = "/var/lib/grafana"
-  }
-
-  env = [
-    "GRAFANA_SECURITY_ADMIN_PASSWORD=${var.grafana_admin_password}",
-  ]
-
-  restart = "unless-stopped"
-
-  depends_on = [
-    docker_volume.grafana_data_volume,
-    docker_image.grafana_image
-  ]
-}
-
 # --- Outputs ---
-# Output the URL for the web app
+# We output the URL address where the web page will be available after successful deployment.
 output "web_application_url" {
-  description = "URL for the IoT data viewer web page"
+  description = "URL where the IoT data viewer web page is available"
+  # We use the known Docker LXC IP address directly
   value       = "http://[DOCKER_ZEROTIER_IP_ADDRESS]:${var.web_app_external_port}"
-}
-
-# Output the URL for Grafana
-output "grafana_url" {
-  description = "URL for the Grafana interface"
-  value       = "http://[DOCKER_ZEROTIER_IP_ADDRESS]:${var.grafana_external_port}"
 }
