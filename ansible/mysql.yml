@@ -1,6 +1,6 @@
 ---
-- name: Deploy Docker on docker-container
-  hosts: docker
+- name: Deploy MySQL on mysql-container
+  hosts: mysql
   become: yes
   tasks:
   # Start time
@@ -9,79 +9,54 @@
     register: start_time
     delegate_to: localhost
     become: no
+
   # Install Python and required dependencies
   - name: Install Python and required packages
     apt:
       name:
       - python3
       - python3-pip
+      - python3-pymysql
       state: present
       update_cache: yes
-  # Docker container installation
-  - name: Install Docker on docker-container
+
+  # MySQL container installation
+  - name: Install MySQL on mysql-container
     block:
-    - name: Install prerequisites for Docker
+    - name: Install MySQL server
       apt:
-        name:
-        - apt-transport-https
-        - ca-certificates
-        - curl
-        - software-properties-common
+        name: mysql-server
         state: present
         update_cache: yes
-    - name: Add Docker GPG key
-      apt_key:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        state: present
-    - name: Add Docker repository
-      apt_repository:
-        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
-        state: present
-    - name: Install Docker
-      apt:
-        name:
-        - docker-ce
-        - docker-ce-cli
-        - containerd.io
-        state: present
-        update_cache: yes
-    - name: Start and enable Docker service
+    - name: Start and enable MySQL service
       systemd:
-        name: docker
+        name: mysql
         state: started
         enabled: yes
-  # Adjusting LXC configuration
-  - name: Configure LXC container parameters
-    delegate_to: [PROXMOX_ZEROTIER_IP_ADDRESS]
-    delegate_facts: true
-    vars:
-      ansible_user: root
-      ansible_ssh_private_key_file: ~/.ssh/lxc_key
-    block:
-    - name: Allow /dev/net/tun in LXC
-      lineinfile:
-        path: /etc/pve/lxc/{{ hostvars[inventory_hostname].vmid }}.conf
-        line: "lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file"
-        create: yes
-    - name: Allow cgroup2 device permissions
-      lineinfile:
-        path: /etc/pve/lxc/{{ hostvars[inventory_hostname].vmid }}.conf
-        line: "lxc.cgroup2.devices.allow: c 10:200 rwm"
-        create: yes
+    - name: Set MySQL root password
+      mysql_user:
+        name: root
+        password: "######"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        login_user: root
+        login_password: "######"
+        state: present
+
   # End time
   - name: Record end time
     command: date +%s
     register: end_time
     delegate_to: localhost
     become: no
+
   # Output time
   - name: Show execution time
     debug:
-      msg: "Docker installation time: {{ (end_time.stdout | int - start_time.stdout | int) }} seconds"
+      msg: "MySQL installation time: {{ (end_time.stdout | int - start_time.stdout | int) }} seconds"
   - name: Log execution time
     lineinfile:
       path: ansible_time.log
-      line: "Docker installation time: {{ (end_time.stdout | int - start_time.stdout | int) }} seconds"
+      line: "MySQL installation time: {{ (end_time.stdout | int - start_time.stdout | int) }} seconds"
       create: yes
       delegate_to: localhost
       become: no
