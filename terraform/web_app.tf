@@ -1,24 +1,3 @@
-terraform {
-  required_providers {
-    docker = {
-      source  = "kreuzwerker/docker"
-      # It's recommended to specify a concrete version for stability
-      version = "~> 3.0.1"
-    }
-  }
-}
-
-# --- Docker Provider Configuration ---
-# WARNING: tcp://... without TLS is not secure! Consider using TLS in production.
-provider "docker" {
-  host = "tcp://[DOCKER_ZEROTIER_IP_ADDRESS]:2375"
-  # If you were using TLS, you would specify paths to certificates here:
-  # host          = "tcp://[DOCKER_ZEROTIER_IP_ADDRESS]:2376"
-  # ca_material   = file("path/to/ca.pem")
-  # cert_material = file("path/to/cert.pem")
-  # key_material  = file("path/to/key.pem")
-}
-
 # --- Variables ---
 variable "db_host" {
   description = "MySQL database host IP address (from ZeroTier)"
