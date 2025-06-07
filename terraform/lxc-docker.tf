@@ -16,13 +16,6 @@ resource "proxmox_lxc" "docker" {
     keyctl  = 1
   }
 
-  tty          = 2
-  cmode        = "tty"
-  console      = true
-  cpuunits     = 1024
-  cpulimit     = 0
-  swap         = 0
-
   rootfs {
     storage = "IaC-Storage-3"
     size    = "10G"
