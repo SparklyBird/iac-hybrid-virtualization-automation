@@ -3,12 +3,12 @@
   hosts: gitlab
   become: yes
   tasks:
-  # Sākuma laiks
+  # Start time
   - name: Record start time
     command: date +%s
     register: start_time
     delegate_to: localhost
-  # Esošie uzdevumi
+  # Existing tasks
   - name: Install Python and required packages
     apt:
       name:
@@ -51,18 +51,18 @@
         line: "external_url 'http://[GITLAB_ZEROTIER_IP_ADDRESS]'"
     - name: Reconfigure GitLab
       command: gitlab-ctl reconfigure
-  # Beigu laiks
+  # End time
   - name: Record end time
     command: date +%s
     register: end_time
     delegate_to: localhost
-  # Izvadīt laiku
+  # Output time
   - name: Show execution time
     debug:
-      msg: "GitLab uzstādīšanas laiks: {{ (end_time.stdout | int - start_time.stdout | int) }} sekundes"
+      msg: "GitLab installation time: {{ (end_time.stdout | int - start_time.stdout | int) }} seconds"
   - name: Log execution time
     lineinfile:
       path: ansible_time.log
-      line: "GitLab uzstādīšanas laiks: {{ (end_time.stdout | int - start_time.stdout | int) }} sekundes"
+      line: "GitLab installation time: {{ (end_time.stdout | int - start_time.stdout | int) }} seconds"
       create: yes
       delegate_to: localhost
