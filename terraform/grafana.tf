@@ -1,13 +1,3 @@
-terraform {
-  required_providers {
-    docker = {
-      source  = "kreuzwerker/docker"
-      # It's recommended to specify a concrete version for stability
-      version = "~> 3.0.1"
-    }
-  }
-}
-
 # --- Docker Provider Configuration ---
 # Connects to the Docker daemon on your Docker LXC container.
 provider "docker" {
