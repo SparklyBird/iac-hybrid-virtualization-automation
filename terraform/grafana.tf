@@ -28,6 +28,7 @@ variable "grafana_admin_password" {
   sensitive   = true
   # Insert your chosen Grafana admin password here.
   # If not provided, the default will be used, but it's more secure to change it.
+  # You can use your general password or another one.
   default     = "######"
 }
 
