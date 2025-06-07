@@ -9,6 +9,13 @@ resource "proxmox_lxc" "mysql" {
   memory       = 4096
   cores        = 2
   onboot       = true
+  
+  tty          = 2
+  cmode        = "tty"
+  console      = true
+  cpuunits     = 1024
+  cpulimit     = 0
+  swap         = 0
 
   rootfs {
     storage = "IaC-Storage-3"
