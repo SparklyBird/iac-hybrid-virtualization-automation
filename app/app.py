@@ -1,16 +1,16 @@
 # app/app.py
-from flask import Flask, render_template_string, request, jsonify, url_for # Added url_for
+from flask import Flask, render_template_string, request, jsonify, url_for
 import os
 import pymysql
 import math
-from urllib.parse import urlencode # To build URLs with parameters
+from urllib.parse import urlencode
 
 app = Flask(__name__)
 
 # --- Configuration ---
 RECORDS_PER_PAGE = 25
 
-# --- Database connection details ---
+# --- Database Connection Details ---
 db_host = os.environ.get('DB_HOST', '[MYSQL_ZEROTIER_IP_ADDRESS]')
 db_user = os.environ.get('DB_USER', 'iot_user')
 db_password = os.environ.get('DB_PASSWORD', '######')
