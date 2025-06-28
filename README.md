@@ -72,7 +72,7 @@ The deployment process follows a specific order:
 # To provision infrastructure with Terraform
 cd terraform/
 terraform init
-terraform apply -var-file="terraform.tfvars"
+measure_time.ps1
 
 # To configure software with Ansible
 cd ansible/
